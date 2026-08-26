@@ -2,9 +2,11 @@ package com.example.app.repository;
 
 import com.example.app.entity.Course;
 import com.example.app.entity.UserStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -20,6 +22,14 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
     List<Course> findByTeacherId(Long teacherId);
 
     long countByTeacherId(Long teacherId);
+
+    /**
+     * Locks the course row for the duration of the transaction so that concurrent
+     * enrollment requests cannot both pass the capacity check and over-enroll the course.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT c FROM Course c WHERE c.id = :id")
+    Optional<Course> findByIdForUpdate(@Param("id") Long id);
 
     @Query("SELECT c FROM Course c WHERE " +
             "(:department IS NULL OR c.department = :department) AND " +

@@ -38,6 +38,9 @@ public class Course {
     @Column(name = "teacher_id")
     private Long teacherId;
 
+    @Column(name = "max_capacity")
+    private Integer maxCapacity;
+
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 20)

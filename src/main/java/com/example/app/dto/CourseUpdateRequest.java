@@ -18,4 +18,7 @@ public class CourseUpdateRequest {
     private String department;
 
     private UserStatus status;
+
+    @Min(value = 1, message = "maxCapacity must be at least 1")
+    private Integer maxCapacity;
 }

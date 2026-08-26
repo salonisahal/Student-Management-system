@@ -18,6 +18,9 @@ public class CourseDto {
     private int credits;
     private String department;
     private Long teacherId;
+    private Integer maxCapacity;
+    private long enrolledCount;
+    private Integer seatsAvailable;
     private UserStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

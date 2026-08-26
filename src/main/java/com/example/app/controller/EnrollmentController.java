@@ -23,7 +23,9 @@ public class EnrollmentController {
 
     private final EnrollmentService enrollmentService;
 
-    @Operation(summary = "Enroll a student in a course (ADMIN only)")
+    @Operation(summary = "Enroll a student in a course (ADMIN only)",
+            description = "Fails with 409 Conflict if the student is already enrolled, or if the course has " +
+                    "reached its configured maxCapacity (seat limit).")
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<EnrollmentDto>> createEnrollment(@Valid @RequestBody EnrollmentCreateRequest request, HttpServletRequest httpRequest) {

@@ -50,21 +50,24 @@ public class CourseService {
         course.setCredits(request.getCredits());
         course.setDepartment(request.getDepartment());
         course.setTeacherId(request.getTeacherId());
+        course.setMaxCapacity(request.getMaxCapacity());
         course.setStatus(UserStatus.ACTIVE);
         Course saved = courseRepository.save(course);
         auditService.record(actorId, "COURSE_CREATE", "Course", String.valueOf(saved.getId()),
                 "Course created: " + saved.getCourseCode(), ipAddress);
-        return CourseMapper.toDto(saved);
+        return CourseMapper.toDto(saved, 0L);
     }
 
     @Transactional(readOnly = true)
     public Page<CourseDto> getCourses(String department, UserStatus status, Long teacherId, String search, Pageable pageable) {
-        return courseRepository.search(department, status, teacherId, search, pageable).map(CourseMapper::toDto);
+        return courseRepository.search(department, status, teacherId, search, pageable)
+                .map(c -> CourseMapper.toDto(c, enrollmentRepository.countByCourseId(c.getId())));
     }
 
     @Transactional(readOnly = true)
     public CourseDto getCourse(Long id) {
-        return CourseMapper.toDto(findCourseOrThrow(id));
+        Course course = findCourseOrThrow(id);
+        return CourseMapper.toDto(course, enrollmentRepository.countByCourseId(course.getId()));
     }
 
     @Transactional
@@ -75,9 +78,17 @@ public class CourseService {
         course.setCredits(request.getCredits());
         if (request.getDepartment() != null) course.setDepartment(request.getDepartment());
         if (request.getStatus() != null) course.setStatus(request.getStatus());
+        if (request.getMaxCapacity() != null) {
+            long currentEnrollment = enrollmentRepository.countByCourseId(id);
+            if (request.getMaxCapacity() < currentEnrollment) {
+                throw new com.example.app.exception.BadRequestException(
+                        "maxCapacity (" + request.getMaxCapacity() + ") cannot be less than the current enrollment count (" + currentEnrollment + ")");
+            }
+            course.setMaxCapacity(request.getMaxCapacity());
+        }
         Course saved = courseRepository.save(course);
         auditService.record(actorId, "COURSE_UPDATE", "Course", String.valueOf(id), "Course updated", ipAddress);
-        return CourseMapper.toDto(saved);
+        return CourseMapper.toDto(saved, enrollmentRepository.countByCourseId(id));
     }
 
     @Transactional
@@ -97,7 +108,7 @@ public class CourseService {
         Course saved = courseRepository.save(course);
         auditService.record(actorId, "COURSE_ASSIGN_TEACHER", "Course", String.valueOf(courseId),
                 "Assigned teacher " + teacherId + " to course", ipAddress);
-        return CourseMapper.toDto(saved);
+        return CourseMapper.toDto(saved, enrollmentRepository.countByCourseId(courseId));
     }
 
     @Transactional(readOnly = true)

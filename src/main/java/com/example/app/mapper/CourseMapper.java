@@ -8,6 +8,10 @@ public final class CourseMapper {
     }
 
     public static CourseDto toDto(Course c) {
+        return toDto(c, 0L);
+    }
+
+    public static CourseDto toDto(Course c, long enrolledCount) {
         if (c == null) return null;
         CourseDto dto = new CourseDto();
         dto.setId(c.getId());
@@ -17,6 +21,9 @@ public final class CourseMapper {
         dto.setCredits(c.getCredits());
         dto.setDepartment(c.getDepartment());
         dto.setTeacherId(c.getTeacherId());
+        dto.setMaxCapacity(c.getMaxCapacity());
+        dto.setEnrolledCount(enrolledCount);
+        dto.setSeatsAvailable(c.getMaxCapacity() == null ? null : (int) Math.max(0, c.getMaxCapacity() - enrolledCount));
         dto.setStatus(c.getStatus());
         dto.setCreatedAt(c.getCreatedAt());
         dto.setUpdatedAt(c.getUpdatedAt());

@@ -20,4 +20,7 @@ public class CourseCreateRequest {
     private String department;
 
     private Long teacherId;
+
+    @Min(value = 1, message = "maxCapacity must be at least 1")
+    private Integer maxCapacity;
 }

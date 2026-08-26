@@ -5,6 +5,7 @@ import com.example.app.dto.EnrollmentCreateRequest;
 import com.example.app.dto.EnrollmentDto;
 import com.example.app.entity.*;
 import com.example.app.exception.BadRequestException;
+import com.example.app.exception.CapacityExceededException;
 import com.example.app.exception.DuplicateResourceException;
 import com.example.app.exception.ForbiddenException;
 import com.example.app.exception.ResourceNotFoundException;
@@ -44,6 +45,19 @@ public class EnrollmentService {
         }
         if (enrollmentRepository.existsByStudentIdAndCourseId(student.getId(), course.getId())) {
             throw new DuplicateResourceException("Student is already enrolled in this course");
+        }
+
+        // Re-fetch the course with a row-level lock so that concurrent enrollment requests
+        // for the same course are serialized and cannot both slip past the capacity check.
+        Course lockedCourse = courseRepository.findByIdForUpdate(course.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Course not found with id: " + course.getId()));
+        if (lockedCourse.getMaxCapacity() != null) {
+            long currentEnrollment = enrollmentRepository.countByCourseId(lockedCourse.getId());
+            if (currentEnrollment >= lockedCourse.getMaxCapacity()) {
+                throw new CapacityExceededException(
+                        "Course '" + lockedCourse.getCourseCode() + "' has reached its maximum capacity of "
+                                + lockedCourse.getMaxCapacity() + " seats");
+            }
         }
 
         Enrollment enrollment = new Enrollment();
