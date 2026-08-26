@@ -23,7 +23,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -54,6 +58,10 @@ public class CourseService {
         course.setTeacherId(request.getTeacherId());
         course.setMaxCapacity(request.getMaxCapacity());
         course.setStatus(UserStatus.ACTIVE);
+        if (request.getPrerequisiteCourseIds() != null && !request.getPrerequisiteCourseIds().isEmpty()) {
+            validatePrerequisiteIdsExist(request.getPrerequisiteCourseIds());
+            course.setPrerequisiteCourseIds(new HashSet<>(request.getPrerequisiteCourseIds()));
+        }
         Course saved = courseRepository.save(course);
         auditService.record(actorId, "COURSE_CREATE", "Course", String.valueOf(saved.getId()),
                 "Course created: " + saved.getCourseCode(), ipAddress);
@@ -89,6 +97,17 @@ public class CourseService {
             }
             capacityIncreased = course.getMaxCapacity() == null || request.getMaxCapacity() > course.getMaxCapacity();
             course.setMaxCapacity(request.getMaxCapacity());
+        }
+        if (request.getPrerequisiteCourseIds() != null) {
+            Set<Long> newPrerequisites = new HashSet<>(request.getPrerequisiteCourseIds());
+            if (!newPrerequisites.isEmpty()) {
+                if (newPrerequisites.contains(id)) {
+                    throw new com.example.app.exception.BadRequestException("A course cannot be its own prerequisite");
+                }
+                validatePrerequisiteIdsExist(newPrerequisites);
+                validateNoCyclicPrerequisites(id, newPrerequisites);
+            }
+            course.setPrerequisiteCourseIds(newPrerequisites);
         }
         Course saved = courseRepository.save(course);
         auditService.record(actorId, "COURSE_UPDATE", "Course", String.valueOf(id), "Course updated", ipAddress);
@@ -140,5 +159,37 @@ public class CourseService {
     public Course findCourseOrThrow(Long id) {
         return courseRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Course not found with id: " + id));
+    }
+
+    private void validatePrerequisiteIdsExist(Set<Long> prerequisiteIds) {
+        List<Course> found = courseRepository.findAllById(prerequisiteIds);
+        if (found.size() != prerequisiteIds.size()) {
+            throw new ResourceNotFoundException("One or more prerequisite courses could not be found");
+        }
+    }
+
+    /**
+     * Ensures assigning {@code newPrerequisites} to course {@code courseId} does not create a
+     * circular dependency (e.g. A requires B, B requires A), which would make both courses
+     * permanently unenrollable.
+     */
+    private void validateNoCyclicPrerequisites(Long courseId, Set<Long> newPrerequisites) {
+        Set<Long> visited = new HashSet<>();
+        Deque<Long> toVisit = new ArrayDeque<>(newPrerequisites);
+        while (!toVisit.isEmpty()) {
+            Long current = toVisit.poll();
+            if (current.equals(courseId)) {
+                throw new com.example.app.exception.BadRequestException(
+                        "Circular prerequisite dependency detected: course " + courseId + " is reachable from its own prerequisite chain");
+            }
+            if (!visited.add(current)) {
+                continue;
+            }
+            courseRepository.findById(current).ifPresent(c -> {
+                if (c.getPrerequisiteCourseIds() != null) {
+                    toVisit.addAll(c.getPrerequisiteCourseIds());
+                }
+            });
+        }
     }
 }

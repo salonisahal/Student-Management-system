@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +28,7 @@ public class EnrollmentService {
     private final StudentRepository studentRepository;
     private final CourseRepository courseRepository;
     private final TeacherRepository teacherRepository;
+    private final GradeService gradeService;
     private final AuditService auditService;
 
     /**
@@ -50,6 +52,21 @@ public class EnrollmentService {
         }
         if (enrollmentRepository.existsByStudentIdAndCourseId(student.getId(), course.getId())) {
             throw new DuplicateResourceException("Student is already enrolled in this course");
+        }
+
+        // A student must have already passed every prerequisite course before they can be
+        // enrolled (or even waitlisted) into this course.
+        if (course.getPrerequisiteCourseIds() != null && !course.getPrerequisiteCourseIds().isEmpty()) {
+            List<Long> unmetPrerequisiteIds = course.getPrerequisiteCourseIds().stream()
+                    .filter(prereqId -> !gradeService.hasPassedCourse(student.getId(), prereqId))
+                    .collect(java.util.stream.Collectors.toList());
+            if (!unmetPrerequisiteIds.isEmpty()) {
+                List<String> unmetCourseCodes = courseRepository.findAllById(unmetPrerequisiteIds).stream()
+                        .map(Course::getCourseCode)
+                        .collect(java.util.stream.Collectors.toList());
+                throw new BadRequestException(
+                        "Student has not passed the required prerequisite course(s): " + unmetCourseCodes);
+            }
         }
 
         // Re-fetch the course with a row-level lock so that concurrent enrollment requests

@@ -8,6 +8,8 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "courses")
@@ -40,6 +42,16 @@ public class Course {
 
     @Column(name = "max_capacity")
     private Integer maxCapacity;
+
+    /**
+     * IDs of courses that a student must have already passed before they are allowed to
+     * enroll in this course (e.g. "Data Structures I" is a prerequisite of "Data Structures II").
+     * An empty/absent set means the course has no prerequisites.
+     */
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "course_prerequisites", joinColumns = @JoinColumn(name = "course_id"))
+    @Column(name = "prerequisite_course_id")
+    private Set<Long> prerequisiteCourseIds = new HashSet<>();
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)

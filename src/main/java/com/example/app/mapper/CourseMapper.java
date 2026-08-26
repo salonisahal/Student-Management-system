@@ -3,6 +3,8 @@ package com.example.app.mapper;
 import com.example.app.dto.CourseDto;
 import com.example.app.entity.Course;
 
+import java.util.HashSet;
+
 public final class CourseMapper {
     private CourseMapper() {
     }
@@ -24,6 +26,7 @@ public final class CourseMapper {
         dto.setMaxCapacity(c.getMaxCapacity());
         dto.setEnrolledCount(enrolledCount);
         dto.setSeatsAvailable(c.getMaxCapacity() == null ? null : (int) Math.max(0, c.getMaxCapacity() - enrolledCount));
+        dto.setPrerequisiteCourseIds(c.getPrerequisiteCourseIds() == null ? new HashSet<>() : new HashSet<>(c.getPrerequisiteCourseIds()));
         dto.setStatus(c.getStatus());
         dto.setCreatedAt(c.getCreatedAt());
         dto.setUpdatedAt(c.getUpdatedAt());

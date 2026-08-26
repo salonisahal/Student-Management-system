@@ -1,6 +1,8 @@
 com/example/app/security/JwtUtilTest.class
 com/example/app/service/AuthServiceTest.class
 com/example/app/util/GradeCalculatorTest.class
+com/example/app/AuthIntegrationTest.class
+com/example/app/service/EnrollmentServiceTest.class
+com/example/app/service/CourseServiceTest.class
 com/example/app/util/AcademicSummaryCalculatorTest.class
 com/example/app/service/GradeServiceTest.class
-com/example/app/AuthIntegrationTest.class

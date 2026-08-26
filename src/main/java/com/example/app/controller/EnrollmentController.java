@@ -25,10 +25,12 @@ public class EnrollmentController {
     private final EnrollmentService enrollmentService;
 
     @Operation(summary = "Enroll a student in a course (ADMIN only)",
-            description = "Fails with 409 Conflict if the student is already enrolled. If the course has " +
-                    "already reached its configured maxCapacity (seat limit), the student is not rejected; " +
-                    "instead the enrollment is created with status WAITLISTED and the response includes " +
-                    "the student's waitlistPosition. Waitlisted students are automatically promoted to " +
+            description = "Fails with 409 Conflict if the student is already enrolled. Fails with 400 Bad " +
+                    "Request if the course has prerequisite courses and the student has not yet passed all " +
+                    "of them (a passing grade record, i.e. not 'F' or 'NE', is required for each prerequisite). " +
+                    "If the course has already reached its configured maxCapacity (seat limit), the student is " +
+                    "not rejected; instead the enrollment is created with status WAITLISTED and the response " +
+                    "includes the student's waitlistPosition. Waitlisted students are automatically promoted to " +
                     "ACTIVE, oldest-first, whenever a seat frees up (e.g. another student's enrollment is " +
                     "deleted) or the course's capacity is increased.")
     @PostMapping

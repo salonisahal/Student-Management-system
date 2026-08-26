@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -21,6 +22,7 @@ public class CourseDto {
     private Integer maxCapacity;
     private long enrolledCount;
     private Integer seatsAvailable;
+    private Set<Long> prerequisiteCourseIds;
     private UserStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

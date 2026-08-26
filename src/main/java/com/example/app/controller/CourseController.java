@@ -26,7 +26,10 @@ public class CourseController {
 
     private final CourseService courseService;
 
-    @Operation(summary = "Create a course (ADMIN only)")
+    @Operation(summary = "Create a course (ADMIN only)",
+            description = "Optionally accepts prerequisiteCourseIds - IDs of courses a student must have " +
+                    "already passed before they can enroll in this course (e.g. 'Data Structures I' as a " +
+                    "prerequisite of 'Data Structures II'). Returns 404 if any prerequisite course id does not exist.")
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<CourseDto>> createCourse(@Valid @RequestBody CourseCreateRequest request, HttpServletRequest httpRequest) {
@@ -57,7 +60,11 @@ public class CourseController {
         return ResponseEntity.ok(ApiResponse.success("Course retrieved successfully", courseService.getCourse(id)));
     }
 
-    @Operation(summary = "Update a course (ADMIN only)")
+    @Operation(summary = "Update a course (ADMIN only)",
+            description = "If prerequisiteCourseIds is provided (even as an empty array) it replaces the " +
+                    "course's current prerequisite list; omit the field to leave prerequisites unchanged. " +
+                    "Returns 400 if a course is set as its own prerequisite or if the change would create a " +
+                    "circular prerequisite dependency, and 404 if any prerequisite course id does not exist.")
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<CourseDto>> updateCourse(@PathVariable Long id, @Valid @RequestBody CourseUpdateRequest request,

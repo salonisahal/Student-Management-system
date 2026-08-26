@@ -13,6 +13,13 @@ public interface GradeRepository extends JpaRepository<Grade, Long> {
 
     List<Grade> findByStudentId(Long studentId);
 
+    /**
+     * True if the student has at least one grade record for the course whose letter grade is
+     * not in {@code excludedGrades} (typically "F" and "NE") — i.e. the student has passed the
+     * course. Used to enforce course prerequisites.
+     */
+    boolean existsByStudentIdAndCourseIdAndGradeNotIn(Long studentId, Long courseId, List<String> excludedGrades);
+
     @Query("SELECT g FROM Grade g WHERE " +
             "(:studentId IS NULL OR g.studentId = :studentId) AND " +
             "(:courseId IS NULL OR g.courseId = :courseId) AND " +

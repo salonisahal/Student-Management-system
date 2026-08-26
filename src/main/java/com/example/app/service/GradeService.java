@@ -158,4 +158,15 @@ public class GradeService {
         return gradeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Grade not found with id: " + id));
     }
+
+    /**
+     * True if the student has a passing grade on record for the given course, i.e. at least one
+     * grade record whose letter grade is neither "F" (failed) nor "NE" (not eligible/ungraded
+     * due to insufficient attendance). Used to enforce course prerequisite requirements.
+     */
+    @Transactional(readOnly = true)
+    public boolean hasPassedCourse(Long studentId, Long courseId) {
+        return gradeRepository.existsByStudentIdAndCourseIdAndGradeNotIn(
+                studentId, courseId, java.util.List.of("F", GradeCalculator.NOT_ELIGIBLE_GRADE));
+    }
 }

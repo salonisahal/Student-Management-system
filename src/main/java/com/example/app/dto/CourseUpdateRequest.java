@@ -5,6 +5,8 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+import java.util.Set;
+
 @Data
 public class CourseUpdateRequest {
     @NotBlank
@@ -21,4 +23,10 @@ public class CourseUpdateRequest {
 
     @Min(value = 1, message = "maxCapacity must be at least 1")
     private Integer maxCapacity;
+
+    /**
+     * IDs of courses a student must have already passed before they can enroll in this course.
+     * Null means "leave unchanged"; an empty set explicitly clears all prerequisites.
+     */
+    private Set<Long> prerequisiteCourseIds;
 }
