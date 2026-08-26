@@ -33,7 +33,7 @@ public class Enrollment {
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 20)
-    private UserStatus status = UserStatus.ACTIVE;
+    private EnrollmentStatus status = EnrollmentStatus.ACTIVE;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -45,7 +45,7 @@ public class Enrollment {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        if (status == null) status = UserStatus.ACTIVE;
+        if (status == null) status = EnrollmentStatus.ACTIVE;
         if (enrollmentDate == null) enrollmentDate = LocalDate.now();
     }
 

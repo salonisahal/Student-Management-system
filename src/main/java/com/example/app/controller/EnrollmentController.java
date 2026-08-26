@@ -1,6 +1,7 @@
 package com.example.app.controller;
 
 import com.example.app.dto.*;
+import com.example.app.entity.EnrollmentStatus;
 import com.example.app.service.EnrollmentService;
 import com.example.app.util.SecurityUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,25 +25,35 @@ public class EnrollmentController {
     private final EnrollmentService enrollmentService;
 
     @Operation(summary = "Enroll a student in a course (ADMIN only)",
-            description = "Fails with 409 Conflict if the student is already enrolled, or if the course has " +
-                    "reached its configured maxCapacity (seat limit).")
+            description = "Fails with 409 Conflict if the student is already enrolled. If the course has " +
+                    "already reached its configured maxCapacity (seat limit), the student is not rejected; " +
+                    "instead the enrollment is created with status WAITLISTED and the response includes " +
+                    "the student's waitlistPosition. Waitlisted students are automatically promoted to " +
+                    "ACTIVE, oldest-first, whenever a seat frees up (e.g. another student's enrollment is " +
+                    "deleted) or the course's capacity is increased.")
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<EnrollmentDto>> createEnrollment(@Valid @RequestBody EnrollmentCreateRequest request, HttpServletRequest httpRequest) {
         EnrollmentDto enrollment = enrollmentService.createEnrollment(request, SecurityUtil.currentUserId(), httpRequest.getRemoteAddr());
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created("Enrollment created successfully", enrollment));
+        String message = enrollment.getStatus() == EnrollmentStatus.WAITLISTED
+                ? "Course is at capacity - student placed on waitlist at position " + enrollment.getWaitlistPosition()
+                : "Enrollment created successfully";
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(message, enrollment));
     }
 
-    @Operation(summary = "Get paginated enrollments (ADMIN sees all, TEACHER sees assigned courses)")
+    @Operation(summary = "Get paginated enrollments (ADMIN sees all, TEACHER sees assigned courses)",
+            description = "Supports filtering by studentId, courseId, and status (ACTIVE, WAITLISTED, CANCELLED). " +
+                    "Filter by status=WAITLISTED to view a course's current waitlist.")
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
     public ResponseEntity<ApiResponse<PageResponse<EnrollmentDto>>> getEnrollments(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) Long studentId,
-            @RequestParam(required = false) Long courseId) {
+            @RequestParam(required = false) Long courseId,
+            @RequestParam(required = false) EnrollmentStatus status) {
         Pageable pageable = PageRequest.of(page, size);
-        var result = PageResponse.from(enrollmentService.getEnrollments(studentId, courseId, pageable, SecurityUtil.currentUser()));
+        var result = PageResponse.from(enrollmentService.getEnrollments(studentId, courseId, status, pageable, SecurityUtil.currentUser()));
         return ResponseEntity.ok(ApiResponse.success("Enrollments retrieved successfully", result));
     }
 
@@ -54,7 +65,9 @@ public class EnrollmentController {
                 enrollmentService.getEnrollment(id, SecurityUtil.currentUser())));
     }
 
-    @Operation(summary = "Remove/cancel an enrollment (ADMIN only)")
+    @Operation(summary = "Remove/cancel an enrollment (ADMIN only)",
+            description = "If the removed enrollment held an active seat, the longest-waiting student on the " +
+                    "course's waitlist (if any) is automatically promoted to ACTIVE.")
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteEnrollment(@PathVariable Long id, HttpServletRequest httpRequest) {

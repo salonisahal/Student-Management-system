@@ -5,6 +5,7 @@ import com.example.app.dto.GradeCreateRequest;
 import com.example.app.dto.GradeDto;
 import com.example.app.dto.GradeUpdateRequest;
 import com.example.app.entity.Course;
+import com.example.app.entity.EnrollmentStatus;
 import com.example.app.entity.Grade;
 import com.example.app.entity.Teacher;
 import com.example.app.exception.BadRequestException;
@@ -48,8 +49,9 @@ public class GradeService {
                 throw new ForbiddenException("You are not assigned to this course");
             }
         }
-        if (!enrollmentRepository.existsByStudentIdAndCourseId(request.getStudentId(), request.getCourseId())) {
-            throw new BadRequestException("Student is not enrolled in this course");
+        if (!enrollmentRepository.existsByStudentIdAndCourseIdAndStatus(
+                request.getStudentId(), request.getCourseId(), EnrollmentStatus.ACTIVE)) {
+            throw new BadRequestException("Student is not actively enrolled in this course (they may be waitlisted)");
         }
         if (request.getMarks() < 0 || request.getMarks() > 100) {
             throw new BadRequestException("Marks must be between 0 and 100");

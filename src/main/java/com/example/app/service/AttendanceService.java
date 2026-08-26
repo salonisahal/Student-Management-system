@@ -44,8 +44,9 @@ public class AttendanceService {
                 throw new ForbiddenException("You are not assigned to this course");
             }
         }
-        if (!enrollmentRepository.existsByStudentIdAndCourseId(request.getStudentId(), request.getCourseId())) {
-            throw new BadRequestException("Student is not enrolled in this course");
+        if (!enrollmentRepository.existsByStudentIdAndCourseIdAndStatus(
+                request.getStudentId(), request.getCourseId(), EnrollmentStatus.ACTIVE)) {
+            throw new BadRequestException("Student is not actively enrolled in this course (they may be waitlisted)");
         }
         if (request.getAttendanceDate().isAfter(LocalDate.now())) {
             throw new BadRequestException("Attendance date cannot be in the future");

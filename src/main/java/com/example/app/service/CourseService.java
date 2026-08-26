@@ -4,6 +4,7 @@ import com.example.app.audit.AuditService;
 import com.example.app.dto.*;
 import com.example.app.entity.Course;
 import com.example.app.entity.Enrollment;
+import com.example.app.entity.EnrollmentStatus;
 import com.example.app.entity.Teacher;
 import com.example.app.entity.UserStatus;
 import com.example.app.exception.DuplicateResourceException;
@@ -33,6 +34,7 @@ public class CourseService {
     private final TeacherRepository teacherRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final StudentRepository studentRepository;
+    private final EnrollmentService enrollmentService;
     private final AuditService auditService;
 
     @Transactional
@@ -61,13 +63,13 @@ public class CourseService {
     @Transactional(readOnly = true)
     public Page<CourseDto> getCourses(String department, UserStatus status, Long teacherId, String search, Pageable pageable) {
         return courseRepository.search(department, status, teacherId, search, pageable)
-                .map(c -> CourseMapper.toDto(c, enrollmentRepository.countByCourseId(c.getId())));
+                .map(c -> CourseMapper.toDto(c, enrollmentRepository.countByCourseIdAndStatus(c.getId(), EnrollmentStatus.ACTIVE)));
     }
 
     @Transactional(readOnly = true)
     public CourseDto getCourse(Long id) {
         Course course = findCourseOrThrow(id);
-        return CourseMapper.toDto(course, enrollmentRepository.countByCourseId(course.getId()));
+        return CourseMapper.toDto(course, enrollmentRepository.countByCourseIdAndStatus(course.getId(), EnrollmentStatus.ACTIVE));
     }
 
     @Transactional
@@ -78,17 +80,24 @@ public class CourseService {
         course.setCredits(request.getCredits());
         if (request.getDepartment() != null) course.setDepartment(request.getDepartment());
         if (request.getStatus() != null) course.setStatus(request.getStatus());
+        boolean capacityIncreased = false;
         if (request.getMaxCapacity() != null) {
-            long currentEnrollment = enrollmentRepository.countByCourseId(id);
+            long currentEnrollment = enrollmentRepository.countByCourseIdAndStatus(id, EnrollmentStatus.ACTIVE);
             if (request.getMaxCapacity() < currentEnrollment) {
                 throw new com.example.app.exception.BadRequestException(
                         "maxCapacity (" + request.getMaxCapacity() + ") cannot be less than the current enrollment count (" + currentEnrollment + ")");
             }
+            capacityIncreased = course.getMaxCapacity() == null || request.getMaxCapacity() > course.getMaxCapacity();
             course.setMaxCapacity(request.getMaxCapacity());
         }
         Course saved = courseRepository.save(course);
         auditService.record(actorId, "COURSE_UPDATE", "Course", String.valueOf(id), "Course updated", ipAddress);
-        return CourseMapper.toDto(saved, enrollmentRepository.countByCourseId(id));
+
+        // If capacity grew, the newly opened seats should go to whoever has been waiting longest.
+        if (capacityIncreased) {
+            enrollmentService.promoteWaitlistedStudents(id, actorId, ipAddress);
+        }
+        return CourseMapper.toDto(saved, enrollmentRepository.countByCourseIdAndStatus(id, EnrollmentStatus.ACTIVE));
     }
 
     @Transactional
@@ -108,7 +117,7 @@ public class CourseService {
         Course saved = courseRepository.save(course);
         auditService.record(actorId, "COURSE_ASSIGN_TEACHER", "Course", String.valueOf(courseId),
                 "Assigned teacher " + teacherId + " to course", ipAddress);
-        return CourseMapper.toDto(saved, enrollmentRepository.countByCourseId(courseId));
+        return CourseMapper.toDto(saved, enrollmentRepository.countByCourseIdAndStatus(courseId, EnrollmentStatus.ACTIVE));
     }
 
     @Transactional(readOnly = true)
@@ -121,7 +130,9 @@ public class CourseService {
                 throw new ForbiddenException("You are not assigned to this course");
             }
         }
-        List<Long> studentIds = enrollmentRepository.findByCourseId(courseId).stream()
+        // Only students holding a confirmed (ACTIVE) seat are part of the class roster;
+        // waitlisted students are not yet officially enrolled.
+        List<Long> studentIds = enrollmentRepository.findByCourseIdAndStatus(courseId, EnrollmentStatus.ACTIVE).stream()
                 .map(Enrollment::getStudentId).collect(Collectors.toList());
         return studentRepository.findAllById(studentIds).stream().map(StudentMapper::toDto).collect(Collectors.toList());
     }

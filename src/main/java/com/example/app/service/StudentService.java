@@ -136,7 +136,10 @@ public class StudentService {
     public List<CourseDto> getStudentCourses(Long id, UserPrincipal principal) {
         Student student = findStudentOrThrow(id);
         authorizeAccess(student, principal);
+        // Only ACTIVE enrollments represent courses the student is actually attending;
+        // WAITLISTED entries are not yet confirmed seats.
         List<Long> courseIds = enrollmentRepository.findByStudentId(id).stream()
+                .filter(e -> e.getStatus() == EnrollmentStatus.ACTIVE)
                 .map(Enrollment::getCourseId).collect(Collectors.toList());
         return courseRepository.findAllById(courseIds).stream().map(CourseMapper::toDto).collect(Collectors.toList());
     }
@@ -146,7 +149,15 @@ public class StudentService {
         Student student = findStudentOrThrow(id);
         authorizeAccess(student, principal);
         return enrollmentRepository.findByStudentId(id).stream()
-                .map(com.example.app.mapper.EnrollmentMapper::toDto).collect(Collectors.toList());
+                .map(e -> {
+                    Integer position = null;
+                    if (e.getStatus() == EnrollmentStatus.WAITLISTED) {
+                        position = (int) enrollmentRepository.countByCourseIdAndStatusAndIdLessThan(
+                                e.getCourseId(), EnrollmentStatus.WAITLISTED, e.getId()) + 1;
+                    }
+                    return com.example.app.mapper.EnrollmentMapper.toDto(e, position);
+                })
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)

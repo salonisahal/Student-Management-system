@@ -5,7 +5,6 @@ import com.example.app.dto.EnrollmentCreateRequest;
 import com.example.app.dto.EnrollmentDto;
 import com.example.app.entity.*;
 import com.example.app.exception.BadRequestException;
-import com.example.app.exception.CapacityExceededException;
 import com.example.app.exception.DuplicateResourceException;
 import com.example.app.exception.ForbiddenException;
 import com.example.app.exception.ResourceNotFoundException;
@@ -30,6 +29,12 @@ public class EnrollmentService {
     private final TeacherRepository teacherRepository;
     private final AuditService auditService;
 
+    /**
+     * Enroll a student in a course. If the course is already at capacity the student is placed
+     * on the waitlist (status WAITLISTED) instead of being rejected outright; waitlisted
+     * students are automatically promoted to ACTIVE, in first-come-first-served order, whenever
+     * a seat frees up (see {@link #promoteWaitlistedStudents}).
+     */
     @Transactional
     public EnrollmentDto createEnrollment(EnrollmentCreateRequest request, Long actorId, String ipAddress) {
         Student student = studentRepository.findById(request.getStudentId())
@@ -51,49 +56,122 @@ public class EnrollmentService {
         // for the same course are serialized and cannot both slip past the capacity check.
         Course lockedCourse = courseRepository.findByIdForUpdate(course.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Course not found with id: " + course.getId()));
+
+        boolean seatAvailable = true;
         if (lockedCourse.getMaxCapacity() != null) {
-            long currentEnrollment = enrollmentRepository.countByCourseId(lockedCourse.getId());
-            if (currentEnrollment >= lockedCourse.getMaxCapacity()) {
-                throw new CapacityExceededException(
-                        "Course '" + lockedCourse.getCourseCode() + "' has reached its maximum capacity of "
-                                + lockedCourse.getMaxCapacity() + " seats");
-            }
+            long currentActiveEnrollment = enrollmentRepository.countByCourseIdAndStatus(lockedCourse.getId(), EnrollmentStatus.ACTIVE);
+            seatAvailable = currentActiveEnrollment < lockedCourse.getMaxCapacity();
         }
 
         Enrollment enrollment = new Enrollment();
         enrollment.setStudentId(student.getId());
         enrollment.setCourseId(course.getId());
         enrollment.setEnrollmentDate(LocalDate.now());
-        enrollment.setStatus(UserStatus.ACTIVE);
+
+        Integer waitlistPosition = null;
+        if (seatAvailable) {
+            enrollment.setStatus(EnrollmentStatus.ACTIVE);
+        } else {
+            enrollment.setStatus(EnrollmentStatus.WAITLISTED);
+            waitlistPosition = (int) enrollmentRepository.countByCourseIdAndStatus(lockedCourse.getId(), EnrollmentStatus.WAITLISTED) + 1;
+        }
+
         Enrollment saved = enrollmentRepository.save(enrollment);
 
-        auditService.record(actorId, "ENROLLMENT_CREATE", "Enrollment", String.valueOf(saved.getId()),
-                "Student " + student.getId() + " enrolled in course " + course.getId(), ipAddress);
-        return EnrollmentMapper.toDto(saved);
+        if (seatAvailable) {
+            auditService.record(actorId, "ENROLLMENT_CREATE", "Enrollment", String.valueOf(saved.getId()),
+                    "Student " + student.getId() + " enrolled in course " + course.getId(), ipAddress);
+        } else {
+            auditService.record(actorId, "ENROLLMENT_WAITLISTED", "Enrollment", String.valueOf(saved.getId()),
+                    "Course " + course.getId() + " is at capacity; student " + student.getId()
+                            + " placed on waitlist at position " + waitlistPosition, ipAddress);
+        }
+        return EnrollmentMapper.toDto(saved, waitlistPosition);
     }
 
     @Transactional(readOnly = true)
-    public Page<EnrollmentDto> getEnrollments(Long studentId, Long courseId, Pageable pageable, UserPrincipal principal) {
+    public Page<EnrollmentDto> getEnrollments(Long studentId, Long courseId, EnrollmentStatus status, Pageable pageable, UserPrincipal principal) {
         if ("TEACHER".equals(principal.getRole())) {
             Teacher teacher = teacherRepository.findByUserId(principal.getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Teacher profile not found"));
-            return enrollmentRepository.searchByTeacherId(teacher.getId(), studentId, courseId, pageable).map(EnrollmentMapper::toDto);
+            return enrollmentRepository.searchByTeacherId(teacher.getId(), studentId, courseId, status, pageable)
+                    .map(this::toDtoWithPosition);
         }
-        return enrollmentRepository.search(studentId, courseId, pageable).map(EnrollmentMapper::toDto);
+        return enrollmentRepository.search(studentId, courseId, status, pageable).map(this::toDtoWithPosition);
     }
 
     @Transactional(readOnly = true)
     public EnrollmentDto getEnrollment(Long id, UserPrincipal principal) {
         Enrollment enrollment = findEnrollmentOrThrow(id);
         authorizeAccess(enrollment, principal);
-        return EnrollmentMapper.toDto(enrollment);
+        return toDtoWithPosition(enrollment);
     }
 
+    /**
+     * Remove/cancel an enrollment. If the removed enrollment held an active seat, the course's
+     * waitlist (if any) is automatically consulted and the longest-waiting student promoted.
+     */
     @Transactional
     public void deleteEnrollment(Long id, Long actorId, String ipAddress) {
         Enrollment enrollment = findEnrollmentOrThrow(id);
+        Long courseId = enrollment.getCourseId();
+        Long studentId = enrollment.getStudentId();
+        boolean freedActiveSeat = enrollment.getStatus() == EnrollmentStatus.ACTIVE;
+
         enrollmentRepository.delete(enrollment);
-        auditService.record(actorId, "ENROLLMENT_DELETE", "Enrollment", String.valueOf(id), "Enrollment removed", ipAddress);
+        auditService.record(actorId, "ENROLLMENT_DELETE", "Enrollment", String.valueOf(id),
+                "Enrollment removed for student " + studentId + " in course " + courseId, ipAddress);
+
+        if (freedActiveSeat) {
+            promoteWaitlistedStudents(courseId, actorId, ipAddress);
+        }
+    }
+
+    /**
+     * Promotes as many waitlisted students as there are free seats in the course, oldest
+     * waitlist entry first. Safe to call whenever a seat may have freed up (a drop) or capacity
+     * may have increased (an admin raising maxCapacity). No-op if there is no waitlist or no
+     * free seats.
+     */
+    @Transactional
+    public int promoteWaitlistedStudents(Long courseId, Long actorId, String ipAddress) {
+        Course course = courseRepository.findByIdForUpdate(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Course not found with id: " + courseId));
+        if (course.getStatus() != UserStatus.ACTIVE) {
+            return 0;
+        }
+
+        int promoted = 0;
+        while (true) {
+            if (course.getMaxCapacity() != null) {
+                long activeCount = enrollmentRepository.countByCourseIdAndStatus(courseId, EnrollmentStatus.ACTIVE);
+                if (activeCount >= course.getMaxCapacity()) {
+                    break;
+                }
+            }
+            Enrollment next = enrollmentRepository
+                    .findFirstByCourseIdAndStatusOrderByIdAsc(courseId, EnrollmentStatus.WAITLISTED)
+                    .orElse(null);
+            if (next == null) {
+                break;
+            }
+            next.setStatus(EnrollmentStatus.ACTIVE);
+            next.setEnrollmentDate(LocalDate.now());
+            enrollmentRepository.save(next);
+            auditService.record(actorId, "ENROLLMENT_PROMOTED", "Enrollment", String.valueOf(next.getId()),
+                    "Student " + next.getStudentId() + " promoted from waitlist to an active seat in course " + courseId, ipAddress);
+            promoted++;
+        }
+        return promoted;
+    }
+
+    private EnrollmentDto toDtoWithPosition(Enrollment enrollment) {
+        Integer position = null;
+        if (enrollment.getStatus() == EnrollmentStatus.WAITLISTED) {
+            position = (int) enrollmentRepository.countByCourseIdAndStatusAndIdLessThan(
+                    enrollment.getCourseId(), EnrollmentStatus.WAITLISTED, enrollment.getId()) + 1;
+        }
+        return EnrollmentMapper.toDto(enrollment, position);
     }
 
     private void authorizeAccess(Enrollment enrollment, UserPrincipal principal) {

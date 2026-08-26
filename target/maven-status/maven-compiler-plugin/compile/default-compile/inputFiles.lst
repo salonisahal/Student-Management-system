@@ -34,7 +34,6 @@
 /home/himanshu.jangra/backendX/backend/outputs/3632f82b-3c53-4201-877b-17b1182fb512/src/main/java/com/example/app/entity/AttendanceStatus.java
 /home/himanshu.jangra/backendX/backend/outputs/3632f82b-3c53-4201-877b-17b1182fb512/src/main/java/com/example/app/repository/CourseRepository.java
 /home/himanshu.jangra/backendX/backend/outputs/3632f82b-3c53-4201-877b-17b1182fb512/src/main/java/com/example/app/mapper/TeacherMapper.java
-/home/himanshu.jangra/backendX/backend/outputs/3632f82b-3c53-4201-877b-17b1182fb512/src/main/java/com/example/app/exception/CapacityExceededException.java
 /home/himanshu.jangra/backendX/backend/outputs/3632f82b-3c53-4201-877b-17b1182fb512/src/main/java/com/example/app/dto/ChangePasswordRequest.java
 /home/himanshu.jangra/backendX/backend/outputs/3632f82b-3c53-4201-877b-17b1182fb512/src/main/java/com/example/app/exception/DuplicateResourceException.java
 /home/himanshu.jangra/backendX/backend/outputs/3632f82b-3c53-4201-877b-17b1182fb512/src/main/java/com/example/app/entity/Enrollment.java
@@ -61,6 +60,7 @@
 /home/himanshu.jangra/backendX/backend/outputs/3632f82b-3c53-4201-877b-17b1182fb512/src/main/java/com/example/app/dto/UserUpdateRequest.java
 /home/himanshu.jangra/backendX/backend/outputs/3632f82b-3c53-4201-877b-17b1182fb512/src/main/java/com/example/app/dto/CourseUpdateRequest.java
 /home/himanshu.jangra/backendX/backend/outputs/3632f82b-3c53-4201-877b-17b1182fb512/src/main/java/com/example/app/entity/Grade.java
+/home/himanshu.jangra/backendX/backend/outputs/3632f82b-3c53-4201-877b-17b1182fb512/src/main/java/com/example/app/entity/EnrollmentStatus.java
 /home/himanshu.jangra/backendX/backend/outputs/3632f82b-3c53-4201-877b-17b1182fb512/src/main/java/com/example/app/repository/TeacherRepository.java
 /home/himanshu.jangra/backendX/backend/outputs/3632f82b-3c53-4201-877b-17b1182fb512/src/main/java/com/example/app/dto/EnrollmentCreateRequest.java
 /home/himanshu.jangra/backendX/backend/outputs/3632f82b-3c53-4201-877b-17b1182fb512/src/main/java/com/example/app/dto/GradeDto.java

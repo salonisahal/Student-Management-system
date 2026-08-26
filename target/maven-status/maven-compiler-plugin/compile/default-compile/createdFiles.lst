@@ -101,11 +101,11 @@ com/example/app/service/AttendanceService.class
 com/example/app/dto/AttendanceDto.class
 com/example/app/dto/EnrollmentDto.class
 com/example/app/dto/UserUpdateRequest.class
-com/example/app/exception/CapacityExceededException.class
 com/example/app/entity/User.class
 com/example/app/util/SecurityUtil.class
 com/example/app/dto/ChangePasswordRequest.class
 com/example/app/service/UserService.class
 com/example/app/mapper/TeacherMapper.class
 com/example/app/dto/LoginRequest.class
+com/example/app/entity/EnrollmentStatus.class
 com/example/app/exception/InvalidTokenException.class

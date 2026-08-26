@@ -53,7 +53,7 @@ public class DashboardService {
         List<Long> courseIds = courses.stream().map(Course::getId).collect(Collectors.toList());
 
         long totalStudents = courseIds.stream()
-                .flatMap(cid -> enrollmentRepository.findByCourseId(cid).stream())
+                .flatMap(cid -> enrollmentRepository.findByCourseIdAndStatus(cid, EnrollmentStatus.ACTIVE).stream())
                 .map(Enrollment::getStudentId).distinct().count();
 
         Map<String, Long> attendanceStats = attendanceRepository.findAll().stream()
@@ -73,6 +73,7 @@ public class DashboardService {
                 .orElseThrow(() -> new ResourceNotFoundException("Student profile not found for current user"));
 
         List<Long> courseIds = enrollmentRepository.findByStudentId(student.getId()).stream()
+                .filter(e -> e.getStatus() == EnrollmentStatus.ACTIVE)
                 .map(Enrollment::getCourseId).collect(Collectors.toList());
         List<CourseDto> courses = courseRepository.findAllById(courseIds).stream()
                 .map(CourseMapper::toDto).collect(Collectors.toList());
