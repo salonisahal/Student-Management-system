@@ -23,12 +23,17 @@ public class GradeController {
 
     private final GradeService gradeService;
 
-    @Operation(summary = "Create a grade (ADMIN or assigned TEACHER) - grade letter is auto-calculated")
+    @Operation(summary = "Create a grade (ADMIN or assigned TEACHER) - grade letter is auto-calculated. " +
+            "If the student's attendance in the course is below the minimum required percentage, the grade " +
+            "is recorded as 'NE' (Not Eligible) instead of a marks-derived letter grade.")
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
     public ResponseEntity<ApiResponse<GradeDto>> createGrade(@Valid @RequestBody GradeCreateRequest request, HttpServletRequest httpRequest) {
         GradeDto grade = gradeService.createGrade(request, SecurityUtil.currentUser(), httpRequest.getRemoteAddr());
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created("Grade created successfully", grade));
+        String message = "NE".equals(grade.getGrade())
+                ? "Grade recorded as Not Eligible (NE) - student's attendance in this course is below the required minimum"
+                : "Grade created successfully";
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(message, grade));
     }
 
     @Operation(summary = "Get grades with optional filters")
@@ -61,7 +66,10 @@ public class GradeController {
     public ResponseEntity<ApiResponse<GradeDto>> updateGrade(@PathVariable Long id, @Valid @RequestBody GradeUpdateRequest request,
                                                               HttpServletRequest httpRequest) {
         GradeDto grade = gradeService.updateGrade(id, request, SecurityUtil.currentUser(), httpRequest.getRemoteAddr());
-        return ResponseEntity.ok(ApiResponse.success("Grade updated successfully", grade));
+        String message = "NE".equals(grade.getGrade())
+                ? "Grade recorded as Not Eligible (NE) - student's attendance in this course is below the required minimum"
+                : "Grade updated successfully";
+        return ResponseEntity.ok(ApiResponse.success(message, grade));
     }
 
     @Operation(summary = "Delete a grade (ADMIN only)")

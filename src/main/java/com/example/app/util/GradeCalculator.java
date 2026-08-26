@@ -5,6 +5,15 @@ package com.example.app.util;
  */
 public final class GradeCalculator {
 
+    /**
+     * Sentinel letter grade used when a student is not allowed a final grade because their
+     * attendance in the course fell below the institution's minimum eligibility threshold
+     * (see {@link com.example.app.service.AttendanceService#MIN_ATTENDANCE_PERCENTAGE_FOR_GRADING}).
+     * "Not Eligible" is recorded instead of a mark-derived letter grade to protect the
+     * institution during accreditation audits.
+     */
+    public static final String NOT_ELIGIBLE_GRADE = "NE";
+
     private GradeCalculator() {
     }
 
@@ -32,6 +41,7 @@ public final class GradeCalculator {
             case "D": return 1.0;
             case "E": return 0.5;
             case "F": return 0.0;
+            case NOT_ELIGIBLE_GRADE: return 0.0;
             default: return 0.0;
         }
     }

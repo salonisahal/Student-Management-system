@@ -5,11 +5,17 @@ import com.example.app.entity.Grade;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Builds a student's academic summary, weighting each course's contribution by its credit
  * value so that, e.g., a 90 in a 1-credit elective does not count the same as a 90 in a
  * 4-credit core course.
+ *
+ * <p>Courses marked "Not Eligible" (NE) - because the student's attendance fell below the
+ * institution's minimum threshold - are excluded from every numeric computation (averages,
+ * highest/lowest marks, GPA) so an accreditation-blocking attendance issue can never be masked
+ * by, or bleed into, the student's otherwise-earned academic standing.</p>
  */
 public final class AcademicSummaryCalculator {
 
@@ -24,17 +30,26 @@ public final class AcademicSummaryCalculator {
      */
     public static GradeSummaryDto summarize(List<Grade> grades, Map<Long, Integer> creditsByCourseId) {
         if (grades == null || grades.isEmpty()) {
-            return new GradeSummaryDto(0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, "N/A");
+            return new GradeSummaryDto(0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, "N/A");
         }
 
-        double simpleAverageMarks = grades.stream().mapToDouble(Grade::getMarks).average().orElse(0);
-        double highest = grades.stream().mapToDouble(Grade::getMarks).max().orElse(0);
-        double lowest = grades.stream().mapToDouble(Grade::getMarks).min().orElse(0);
+        List<Grade> eligibleGrades = grades.stream()
+                .filter(g -> !GradeCalculator.NOT_ELIGIBLE_GRADE.equals(g.getGrade()))
+                .collect(Collectors.toList());
+        long ineligibleCourses = grades.size() - eligibleGrades.size();
+
+        if (eligibleGrades.isEmpty()) {
+            return new GradeSummaryDto(grades.size(), ineligibleCourses, 0, 0.0, 0.0, 0.0, 0.0, 0.0, "N/A");
+        }
+
+        double simpleAverageMarks = eligibleGrades.stream().mapToDouble(Grade::getMarks).average().orElse(0);
+        double highest = eligibleGrades.stream().mapToDouble(Grade::getMarks).max().orElse(0);
+        double lowest = eligibleGrades.stream().mapToDouble(Grade::getMarks).min().orElse(0);
 
         int totalCredits = 0;
         double weightedMarksSum = 0.0;
         double weightedPointsSum = 0.0;
-        for (Grade grade : grades) {
+        for (Grade grade : eligibleGrades) {
             int credits = creditsByCourseId.getOrDefault(grade.getCourseId(), DEFAULT_CREDITS_IF_UNKNOWN);
             totalCredits += credits;
             weightedMarksSum += grade.getMarks() * credits;
@@ -47,6 +62,7 @@ public final class AcademicSummaryCalculator {
 
         return new GradeSummaryDto(
                 grades.size(),
+                ineligibleCourses,
                 totalCredits,
                 round(simpleAverageMarks),
                 round(weightedAverageMarks),

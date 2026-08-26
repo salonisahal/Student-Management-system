@@ -10,9 +10,14 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class GradeSummaryDto {
 
+    @Schema(description = "Total number of grade records, including any courses marked Not Eligible (NE)")
     private long totalCourses;
 
-    @Schema(description = "Sum of credit hours across all graded courses")
+    @Schema(description = "Number of courses marked 'Not Eligible' (NE) because the student's attendance " +
+            "fell below the minimum required percentage; these are excluded from averages/GPA below")
+    private long ineligibleCourses;
+
+    @Schema(description = "Sum of credit hours across graded courses that were actually eligible for a final grade")
     private int totalCredits;
 
     @Schema(description = "Simple (unweighted) average of marks across all graded courses")

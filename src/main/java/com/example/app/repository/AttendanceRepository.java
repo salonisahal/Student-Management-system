@@ -41,4 +41,6 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
                                         @Param("status") AttendanceStatus status, Pageable pageable);
 
     List<Attendance> findByStudentIdAndCourseIdIn(Long studentId, List<Long> courseIds);
+
+    List<Attendance> findByStudentIdAndCourseId(Long studentId, Long courseId);
 }

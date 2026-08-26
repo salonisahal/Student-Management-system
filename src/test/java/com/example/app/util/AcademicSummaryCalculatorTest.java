@@ -57,4 +57,39 @@ class AcademicSummaryCalculatorTest {
         assertEquals(1, summary.getTotalCredits());
         assertEquals(80.0, summary.getWeightedAverageMarks());
     }
+
+    @Test
+    void excludesNotEligibleGradesFromAveragesAndGpaButCountsThem() {
+        // Course 1: a normal 90 in a 3-credit course.
+        // Course 2: marks were entered (55) but the student was marked NE due to poor attendance -
+        // this must NOT drag down the average/GPA, since NE is not a real earned grade.
+        Grade normal = grade(1L, 90);
+        Grade ineligible = grade(2L, 55);
+        ineligible.setGrade(GradeCalculator.NOT_ELIGIBLE_GRADE);
+
+        Map<Long, Integer> credits = Map.of(1L, 3, 2L, 4);
+        GradeSummaryDto summary = AcademicSummaryCalculator.summarize(List.of(normal, ineligible), credits);
+
+        assertEquals(2, summary.getTotalCourses());
+        assertEquals(1, summary.getIneligibleCourses());
+        // Only the 3 credits from the eligible course should count.
+        assertEquals(3, summary.getTotalCredits());
+        assertEquals(90.0, summary.getWeightedAverageMarks());
+        assertEquals(4.0, summary.getGpa());
+        assertEquals("A+", summary.getOverallGrade());
+    }
+
+    @Test
+    void returnsZeroedNumericSummaryWhenAllGradesAreNotEligible() {
+        Grade ineligible = grade(1L, 70);
+        ineligible.setGrade(GradeCalculator.NOT_ELIGIBLE_GRADE);
+
+        GradeSummaryDto summary = AcademicSummaryCalculator.summarize(List.of(ineligible), Map.of(1L, 3));
+
+        assertEquals(1, summary.getTotalCourses());
+        assertEquals(1, summary.getIneligibleCourses());
+        assertEquals(0, summary.getTotalCredits());
+        assertEquals(0.0, summary.getGpa());
+        assertEquals("N/A", summary.getOverallGrade());
+    }
 }

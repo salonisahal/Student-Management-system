@@ -19,10 +19,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class AttendanceService {
+
+    /**
+     * Minimum attendance percentage a student must have in a course before a final grade may
+     * be recorded for them. Below this threshold the student must be marked "Not Eligible" (NE)
+     * rather than graded normally, per institutional accreditation policy.
+     */
+    public static final double MIN_ATTENDANCE_PERCENTAGE_FOR_GRADING = 75.0;
 
     private final AttendanceRepository attendanceRepository;
     private final StudentRepository studentRepository;
@@ -104,6 +112,37 @@ public class AttendanceService {
         authorizeTeacherOrAdmin(attendance, principal);
         attendanceRepository.delete(attendance);
         auditService.record(principal.getId(), "ATTENDANCE_DELETE", "Attendance", String.valueOf(id), "Attendance deleted", ipAddress);
+    }
+
+    /**
+     * Computes a student's attendance percentage for a specific course as
+     * (PRESENT + LATE) / total attendance records * 100, consistent with the definition used
+     * for the student-wide attendance summary.
+     */
+    @Transactional(readOnly = true)
+    public double calculateCourseAttendancePercentage(Long studentId, Long courseId) {
+        List<Attendance> records = attendanceRepository.findByStudentIdAndCourseId(studentId, courseId);
+        long total = records.size();
+        if (total == 0) return 0.0;
+        long presentOrLate = records.stream()
+                .filter(a -> a.getStatus() == AttendanceStatus.PRESENT || a.getStatus() == AttendanceStatus.LATE)
+                .count();
+        return Math.round((presentOrLate * 10000.0) / total) / 100.0;
+    }
+
+    /**
+     * Determines whether a student is eligible for a final grade in a course based on their
+     * attendance record. If no attendance has been recorded yet for the student/course, there
+     * is no data to penalize against, so eligibility defaults to true. Otherwise, the student
+     * must have at least {@link #MIN_ATTENDANCE_PERCENTAGE_FOR_GRADING} percent attendance.
+     */
+    @Transactional(readOnly = true)
+    public boolean isEligibleForGrading(Long studentId, Long courseId) {
+        List<Attendance> records = attendanceRepository.findByStudentIdAndCourseId(studentId, courseId);
+        if (records.isEmpty()) {
+            return true;
+        }
+        return calculateCourseAttendancePercentage(studentId, courseId) >= MIN_ATTENDANCE_PERCENTAGE_FOR_GRADING;
     }
 
     private void authorizeTeacherOrAdmin(Attendance attendance, UserPrincipal principal) {

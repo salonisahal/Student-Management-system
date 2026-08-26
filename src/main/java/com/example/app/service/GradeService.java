@@ -34,6 +34,7 @@ public class GradeService {
     private final CourseRepository courseRepository;
     private final TeacherRepository teacherRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final AttendanceService attendanceService;
     private final AuditService auditService;
 
     @Transactional
@@ -57,17 +58,22 @@ public class GradeService {
             throw new BadRequestException("Marks must be between 0 and 100");
         }
 
+        boolean eligible = attendanceService.isEligibleForGrading(request.getStudentId(), request.getCourseId());
+
         Grade grade = new Grade();
         grade.setStudentId(request.getStudentId());
         grade.setCourseId(request.getCourseId());
         grade.setMarks(request.getMarks());
-        grade.setGrade(GradeCalculator.calculate(request.getMarks()));
+        grade.setGrade(eligible ? GradeCalculator.calculate(request.getMarks()) : GradeCalculator.NOT_ELIGIBLE_GRADE);
         grade.setRemarks(request.getRemarks());
         grade.setGradedBy(principal.getId());
         Grade saved = gradeRepository.save(grade);
 
-        auditService.record(principal.getId(), "GRADE_CREATE", "Grade", String.valueOf(saved.getId()),
-                "Grade recorded for student " + request.getStudentId(), ipAddress);
+        String auditMessage = eligible
+                ? "Grade recorded for student " + request.getStudentId()
+                : "Grade recorded as Not Eligible (NE) for student " + request.getStudentId()
+                        + " due to insufficient attendance (< " + AttendanceService.MIN_ATTENDANCE_PERCENTAGE_FOR_GRADING + "%)";
+        auditService.record(principal.getId(), "GRADE_CREATE", "Grade", String.valueOf(saved.getId()), auditMessage, ipAddress);
         return GradeMapper.toDto(saved);
     }
 
@@ -96,12 +102,18 @@ public class GradeService {
         if (request.getMarks() < 0 || request.getMarks() > 100) {
             throw new BadRequestException("Marks must be between 0 and 100");
         }
+        boolean eligible = attendanceService.isEligibleForGrading(grade.getStudentId(), grade.getCourseId());
+
         grade.setMarks(request.getMarks());
-        grade.setGrade(GradeCalculator.calculate(request.getMarks()));
+        grade.setGrade(eligible ? GradeCalculator.calculate(request.getMarks()) : GradeCalculator.NOT_ELIGIBLE_GRADE);
         grade.setRemarks(request.getRemarks());
         grade.setGradedBy(principal.getId());
         Grade saved = gradeRepository.save(grade);
-        auditService.record(principal.getId(), "GRADE_UPDATE", "Grade", String.valueOf(id), "Grade updated", ipAddress);
+
+        String auditMessage = eligible ? "Grade updated"
+                : "Grade updated as Not Eligible (NE) due to insufficient attendance (< "
+                        + AttendanceService.MIN_ATTENDANCE_PERCENTAGE_FOR_GRADING + "%)";
+        auditService.record(principal.getId(), "GRADE_UPDATE", "Grade", String.valueOf(id), auditMessage, ipAddress);
         return GradeMapper.toDto(saved);
     }
 

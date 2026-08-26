@@ -39,4 +39,10 @@ class GradeCalculatorTest {
         assertEquals(0.0, GradeCalculator.gradePoint(null));
         assertEquals(0.0, GradeCalculator.gradePoint("Z"));
     }
+
+    @Test
+    void gradePointIsZeroForNotEligibleGrade() {
+        assertEquals("NE", GradeCalculator.NOT_ELIGIBLE_GRADE);
+        assertEquals(0.0, GradeCalculator.gradePoint(GradeCalculator.NOT_ELIGIBLE_GRADE));
+    }
 }
