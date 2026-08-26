@@ -1,0 +1,41 @@
+version: "3.8"
+
+services:
+  app:
+    build: .
+    container_name: sms-app
+    ports:
+      - "29909:29909"
+    environment:
+      SERVER_PORT: 29909
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/gen_0cd68058ca0d?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: myuser
+      SPRING_DATASOURCE_PASSWORD: mypassword
+      JWT_SECRET: dGhpc2lzYXZlcnlsb25nc2VjcmV0a2V5Zm9yc3R1ZGVudG1hbmFnZW1lbnRzeXN0ZW1qd3RzaWduaW5nMjAyNA==
+      JWT_ACCESS_EXPIRATION: 1800000
+      JWT_REFRESH_EXPIRATION: 604800000
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.0
+    container_name: sms-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: gen_0cd68058ca0d
+      MYSQL_USER: myuser
+      MYSQL_PASSWORD: mypassword
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - sms-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  sms-mysql-data:

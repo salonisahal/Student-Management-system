@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.example.app.security.JwtUtilTest
+-------------------------------------------------------------------------------
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.721 s -- in com.example.app.security.JwtUtilTest

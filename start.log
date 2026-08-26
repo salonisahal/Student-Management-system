@@ -1,0 +1,48 @@
+Building application (mvn package -DskipTests)...
+Starting Student Management System on port 29909...
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.5)
+
+2026-08-26T09:48:24.987Z  INFO 32508 --- [Student Management System] [           main] com.example.app.AppApplication           : Starting AppApplication v0.1.0 using Java 21.0.12.1 with PID 32508 (/home/himanshu.jangra/backendX/backend/outputs/3632f82b-3c53-4201-877b-17b1182fb512/target/app.jar started by himanshu.jangra in /home/himanshu.jangra/backendX/backend/outputs/3632f82b-3c53-4201-877b-17b1182fb512)
+2026-08-26T09:48:24.996Z  INFO 32508 --- [Student Management System] [           main] com.example.app.AppApplication           : No active profile set, falling back to 1 default profile: "default"
+2026-08-26T09:48:31.312Z  INFO 32508 --- [Student Management System] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-08-26T09:48:31.630Z  INFO 32508 --- [Student Management System] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 281 ms. Found 9 JPA repository interfaces.
+2026-08-26T09:48:35.154Z  INFO 32508 --- [Student Management System] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 29909 (http)
+2026-08-26T09:48:35.233Z  INFO 32508 --- [Student Management System] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-08-26T09:48:35.235Z  INFO 32508 --- [Student Management System] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-08-26T09:48:35.362Z  INFO 32508 --- [Student Management System] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-08-26T09:48:35.366Z  INFO 32508 --- [Student Management System] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 9959 ms
+2026-08-26T09:48:36.749Z  INFO 32508 --- [Student Management System] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-08-26T09:48:37.511Z  INFO 32508 --- [Student Management System] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@208f7165
+2026-08-26T09:48:37.517Z  INFO 32508 --- [Student Management System] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-08-26T09:48:37.951Z  INFO 32508 --- [Student Management System] [           main] o.f.c.internal.license.VersionPrinter    : Flyway Community Edition 9.22.3 by Redgate
+2026-08-26T09:48:37.951Z  INFO 32508 --- [Student Management System] [           main] o.f.c.internal.license.VersionPrinter    : See release notes here: https://rd.gt/416ObMi
+2026-08-26T09:48:37.951Z  INFO 32508 --- [Student Management System] [           main] o.f.c.internal.license.VersionPrinter    : 
+2026-08-26T09:48:38.176Z  INFO 32508 --- [Student Management System] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:3306/gen_0cd68058ca0d (MySQL 11.8)
+2026-08-26T09:48:38.287Z  WARN 32508 --- [Student Management System] [           main] o.f.c.internal.database.base.Database    : Flyway upgrade recommended: MariaDB 11.8 is newer than this version of Flyway and support has not been tested. The latest supported version of MariaDB is 10.11.
+2026-08-26T09:48:38.507Z  INFO 32508 --- [Student Management System] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 9 migrations (execution time 00:00.156s)
+2026-08-26T09:48:38.561Z  INFO 32508 --- [Student Management System] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema `gen_0cd68058ca0d`: 9
+2026-08-26T09:48:38.572Z  INFO 32508 --- [Student Management System] [           main] o.f.core.internal.command.DbMigrate      : Schema `gen_0cd68058ca0d` is up to date. No migration necessary.
+2026-08-26T09:48:39.068Z  INFO 32508 --- [Student Management System] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-08-26T09:48:39.323Z  INFO 32508 --- [Student Management System] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-08-26T09:48:39.480Z  INFO 32508 --- [Student Management System] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-08-26T09:48:40.508Z  INFO 32508 --- [Student Management System] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-08-26T09:48:40.646Z  WARN 32508 --- [Student Management System] [           main] o.h.e.j.e.i.JdbcEnvironmentInitiator     : HHH000339: Could not obtain connection metadata: java.sql.SQLSyntaxErrorException: Unknown column 'RESERVED' in 'WHERE'
+2026-08-26T09:48:40.722Z  WARN 32508 --- [Student Management System] [           main] org.hibernate.orm.deprecation            : HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-08-26T09:48:44.341Z  INFO 32508 --- [Student Management System] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-08-26T09:48:44.347Z  INFO 32508 --- [Student Management System] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-08-26T09:48:44.904Z  INFO 32508 --- [Student Management System] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-08-26T09:48:48.989Z  INFO 32508 --- [Student Management System] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 2 endpoint(s) beneath base path '/actuator'
+2026-08-26T09:48:49.133Z  INFO 32508 --- [Student Management System] [           main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@2690d8ad, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@6f3bd0e1, org.springframework.security.web.context.SecurityContextHolderFilter@2769efc9, org.springframework.security.web.header.HeaderWriterFilter@3bd42f5b, org.springframework.web.filter.CorsFilter@422910a6, org.springframework.security.web.authentication.logout.LogoutFilter@318d491, com.example.app.security.JwtFilter@73d9f235, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@3c596a57, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@71a4c959, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@4110e312, org.springframework.security.web.session.SessionManagementFilter@20ed6c31, org.springframework.security.web.access.ExceptionTranslationFilter@62125fb5, org.springframework.security.web.access.intercept.AuthorizationFilter@7dcc5e9d]
+2026-08-26T09:48:50.578Z  INFO 32508 --- [Student Management System] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 29909 (http) with context path ''
+2026-08-26T09:48:50.582Z  INFO 32508 --- [Student Management System] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : Starting...
+2026-08-26T09:48:50.583Z  INFO 32508 --- [Student Management System] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : BrokerAvailabilityEvent[available=true, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@6db47c29]]
+2026-08-26T09:48:50.584Z  INFO 32508 --- [Student Management System] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : Started.
+2026-08-26T09:48:50.613Z  INFO 32508 --- [Student Management System] [           main] com.example.app.AppApplication           : Started AppApplication in 27.695 seconds (process running for 29.746)
+2026-08-26T09:49:50.494Z  INFO 32508 --- [Student Management System] [MessageBroker-1] o.s.w.s.c.WebSocketMessageBrokerStats    : WebSocketSession[0 current WS(0)-HttpStream(0)-HttpPoll(0), 0 total, 0 closed abnormally (0 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(0)-CONNECTED(0)-DISCONNECT(0)], stompBrokerRelay[null], inboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], outboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], sockJsScheduler[pool size = 1, active threads = 1, queued tasks = 0, completed tasks = 0]
