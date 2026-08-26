@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -195,14 +196,10 @@ public class StudentService {
         Student student = findStudentOrThrow(id);
         authorizeAccess(student, principal);
         List<Grade> grades = gradeRepository.findByStudentId(id);
-        if (grades.isEmpty()) {
-            return new GradeSummaryDto(0, 0, 0, 0, "N/A");
-        }
-        double avg = grades.stream().mapToDouble(Grade::getMarks).average().orElse(0);
-        double max = grades.stream().mapToDouble(Grade::getMarks).max().orElse(0);
-        double min = grades.stream().mapToDouble(Grade::getMarks).min().orElse(0);
-        String overall = com.example.app.util.GradeCalculator.calculate(avg);
-        return new GradeSummaryDto(grades.size(), Math.round(avg * 100) / 100.0, max, min, overall);
+        Map<Long, Integer> creditsByCourseId = courseRepository.findAllById(
+                        grades.stream().map(Grade::getCourseId).distinct().collect(Collectors.toList()))
+                .stream().collect(Collectors.toMap(Course::getId, Course::getCredits));
+        return com.example.app.util.AcademicSummaryCalculator.summarize(grades, creditsByCourseId);
     }
 
     // ---- Authorization helpers ----

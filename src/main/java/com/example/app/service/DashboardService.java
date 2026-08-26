@@ -88,16 +88,10 @@ public class DashboardService {
         List<Grade> grades = gradeRepository.findByStudentId(student.getId());
         List<GradeDto> gradeDtos = grades.stream().map(GradeMapper::toDto).collect(Collectors.toList());
 
-        GradeSummaryDto summary;
-        if (grades.isEmpty()) {
-            summary = new GradeSummaryDto(0, 0, 0, 0, "N/A");
-        } else {
-            double avg = grades.stream().mapToDouble(Grade::getMarks).average().orElse(0);
-            double max = grades.stream().mapToDouble(Grade::getMarks).max().orElse(0);
-            double min = grades.stream().mapToDouble(Grade::getMarks).min().orElse(0);
-            summary = new GradeSummaryDto(grades.size(), Math.round(avg * 100) / 100.0, max, min,
-                    com.example.app.util.GradeCalculator.calculate(avg));
-        }
+        Map<Long, Integer> creditsByCourseId = courseRepository.findAllById(
+                        grades.stream().map(Grade::getCourseId).distinct().collect(Collectors.toList()))
+                .stream().collect(Collectors.toMap(Course::getId, Course::getCredits));
+        GradeSummaryDto summary = com.example.app.util.AcademicSummaryCalculator.summarize(grades, creditsByCourseId);
 
         return new StudentDashboardDto(courses, attendancePercentage, gradeDtos, summary);
     }

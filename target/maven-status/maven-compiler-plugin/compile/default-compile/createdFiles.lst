@@ -88,6 +88,7 @@ com/example/app/exception/GlobalExceptionHandler.class
 com/example/app/entity/RefreshToken.class
 com/example/app/controller/EnrollmentController.class
 com/example/app/dto/EnrollmentCreateRequest.class
+com/example/app/util/AcademicSummaryCalculator.class
 com/example/app/entity/Enrollment.class
 com/example/app/repository/UserRepository.class
 com/example/app/dto/ApiResponse.class
