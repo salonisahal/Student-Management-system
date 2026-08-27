@@ -87,8 +87,55 @@ class AuthIntegrationTest {
     }
 
     @Test
-    void protectedEndpointWithoutTokenIsRejected() throws Exception {
+    void protectedEndpointWithoutTokenIsUnauthorized() throws Exception {
+        // No credentials supplied at all -> caller was never authenticated,
+        // so this must be 401 ("please log in"), not 403 ("not allowed").
         mockMvc.perform(get("/api/v1/users"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void protectedEndpointWithMalformedTokenIsUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/v1/users").header("Authorization", "Bearer not-a-real-token"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void protectedEndpointWithExpiredTokenIsUnauthorized() throws Exception {
+        // An expired/garbage-signature JWT-shaped token should also be 401, not 403.
+        String expiredLookingToken = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbi1pdEBleGFtcGxlLmNvbSIsImV4cCI6MTB9.invalidsignature";
+        mockMvc.perform(get("/api/v1/users").header("Authorization", "Bearer " + expiredLookingToken))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void studentRoleCannotAccessAdminEndpointGetsForbiddenNotUnauthorized() throws Exception {
+        // A genuinely authenticated user who simply lacks the required role
+        // must still get 403, to distinguish it from "not logged in" (401).
+        User student = new User();
+        student.setFirstName("Stu");
+        student.setLastName("Dent");
+        student.setEmail("student-it@example.com");
+        student.setPassword(passwordEncoder.encode("Student@123"));
+        student.setRole(Role.STUDENT);
+        student.setStatus(UserStatus.ACTIVE);
+        student.setCreatedAt(LocalDateTime.now());
+        student.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(student);
+
+        Map<String, String> body = new HashMap<>();
+        body.put("email", "student-it@example.com");
+        body.put("password", "Student@123");
+
+        String response = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        String token = objectMapper.readTree(response).get("data").get("accessToken").asText();
+
+        mockMvc.perform(get("/api/v1/users").header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
     }
 

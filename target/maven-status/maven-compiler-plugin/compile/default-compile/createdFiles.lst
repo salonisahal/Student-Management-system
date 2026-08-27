@@ -82,6 +82,7 @@ com/example/app/service/TeacherService.class
 com/example/app/exception/ResourceNotFoundException.class
 com/example/app/exception/ValidationException.class
 com/example/app/dto/TeacherDashboardDto.class
+com/example/app/util/SortUtil.class
 com/example/app/dto/CourseCreateRequest.class
 com/example/app/dto/UserDto.class
 com/example/app/exception/GlobalExceptionHandler.class

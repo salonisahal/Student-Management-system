@@ -7,7 +7,10 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -73,7 +76,20 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Object>> handleAccessDenied(AccessDeniedException ex) {
-        return build(HttpStatus.FORBIDDEN, "Access denied");
+        // @PreAuthorize failures surface as AccessDeniedException for BOTH
+        // "not logged in at all" and "logged in but wrong role". Only the
+        // latter is actually a 403 - if there is no real (non-anonymous)
+        // authentication in the context, the caller was never authenticated
+        // in the first place and should get a 401 telling them to log in.
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAuthenticated = authentication != null
+                && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken);
+
+        if (!isAuthenticated) {
+            return build(HttpStatus.UNAUTHORIZED, "Authentication required - please log in");
+        }
+        return build(HttpStatus.FORBIDDEN, "Access denied - you do not have permission to perform this action");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

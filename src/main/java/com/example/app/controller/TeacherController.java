@@ -3,6 +3,7 @@ package com.example.app.controller;
 import com.example.app.dto.*;
 import com.example.app.service.TeacherService;
 import com.example.app.util.SecurityUtil;
+import com.example.app.util.SortUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,7 +42,7 @@ public class TeacherController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "id") String sort,
             @RequestParam(required = false) String search) {
-        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by(sort));
+        Pageable pageable = PageRequest.of(page, size, SortUtil.parse(sort, com.example.app.entity.Teacher.class));
         var result = PageResponse.from(teacherService.getTeachers(search, pageable));
         return ResponseEntity.ok(ApiResponse.success("Teachers retrieved successfully", result));
     }

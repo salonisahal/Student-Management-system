@@ -5,6 +5,7 @@ import com.example.app.entity.UserStatus;
 import com.example.app.security.UserPrincipal;
 import com.example.app.service.StudentService;
 import com.example.app.util.SecurityUtil;
+import com.example.app.util.SortUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -45,7 +46,7 @@ public class StudentController {
             @RequestParam(required = false) String department,
             @RequestParam(required = false) UserStatus status,
             @RequestParam(required = false) String search) {
-        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by(sort));
+        Pageable pageable = PageRequest.of(page, size, SortUtil.parse(sort, com.example.app.entity.Student.class));
         UserPrincipal principal = SecurityUtil.currentUser();
         var result = PageResponse.from(studentService.getStudents(department, status, search, pageable, principal));
         return ResponseEntity.ok(ApiResponse.success("Students retrieved successfully", result));

@@ -5,6 +5,7 @@ import com.example.app.entity.Role;
 import com.example.app.entity.UserStatus;
 import com.example.app.service.UserService;
 import com.example.app.util.SecurityUtil;
+import com.example.app.util.SortUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -42,7 +43,7 @@ public class UserController {
             @RequestParam(required = false) Role role,
             @RequestParam(required = false) UserStatus status,
             @RequestParam(required = false) String search) {
-        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by(sort));
+        Pageable pageable = PageRequest.of(page, size, SortUtil.parse(sort, com.example.app.entity.User.class));
         var result = PageResponse.from(userService.getUsers(role, status, search, pageable));
         return ResponseEntity.ok(ApiResponse.success("Users retrieved successfully", result));
     }

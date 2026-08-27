@@ -18,6 +18,9 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.config.Customizer;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.web.servlet.HandlerExceptionResolver;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Configuration
 @EnableWebSecurity
@@ -29,6 +32,10 @@ public class SecurityConfig {
 
     @Lazy
     private final UserDetailsServiceImpl userDetailsService;
+
+    @Autowired
+    @Qualifier("handlerExceptionResolver")
+    private HandlerExceptionResolver handlerExceptionResolver;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -50,7 +57,7 @@ public class SecurityConfig {
 
     @Bean
     public JwtFilter jwtFilter() {
-        return new JwtFilter(jwtUtil, userDetailsService);
+        return new JwtFilter(jwtUtil, userDetailsService, handlerExceptionResolver);
     }
 
     @Bean
