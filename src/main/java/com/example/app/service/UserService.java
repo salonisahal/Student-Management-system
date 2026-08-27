@@ -8,6 +8,7 @@ import com.example.app.dto.UserUpdateRequest;
 import com.example.app.entity.Role;
 import com.example.app.entity.User;
 import com.example.app.entity.UserStatus;
+import com.example.app.exception.BadRequestException;
 import com.example.app.exception.DuplicateResourceException;
 import com.example.app.exception.ResourceNotFoundException;
 import com.example.app.mapper.UserMapper;
@@ -72,6 +73,10 @@ public class UserService {
 
     @Transactional
     public UserDto updateStatus(Long id, UserStatusUpdateRequest request, Long actorId, String ipAddress) {
+        if (id.equals(actorId) && request.getStatus() != UserStatus.ACTIVE) {
+            throw new BadRequestException("Administrators cannot deactivate or lock their own account");
+        }
+
         User user = findUserOrThrow(id);
         user.setStatus(request.getStatus());
         User saved = userRepository.save(user);
@@ -82,6 +87,10 @@ public class UserService {
 
     @Transactional
     public void deleteUser(Long id, Long actorId, String ipAddress) {
+        if (id.equals(actorId)) {
+            throw new BadRequestException("Administrators cannot delete or deactivate their own account");
+        }
+
         User user = findUserOrThrow(id);
         // Enterprise-safe deletion: deactivate rather than hard-delete to preserve referential integrity/audit trail.
         user.setStatus(UserStatus.INACTIVE);
