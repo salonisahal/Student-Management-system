@@ -47,7 +47,7 @@ public class CourseController {
             @RequestParam(defaultValue = "id") String sort,
             @RequestParam(required = false) String department,
             @RequestParam(required = false) UserStatus status,
-            @RequestParam(required = false) Long teacherId,
+            @RequestParam(name = "teacher", required = false) Long teacherId,
             @RequestParam(required = false) String search) {
         Pageable pageable = PageRequest.of(page, size, SortUtil.parse(sort, com.example.app.entity.Course.class));
         var result = PageResponse.from(courseService.getCourses(department, status, teacherId, search, pageable));
