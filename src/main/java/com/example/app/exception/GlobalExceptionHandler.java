@@ -1,7 +1,11 @@
 package com.example.app.exception;
 
+import com.example.app.audit.AuditService;
 import com.example.app.dto.ApiResponse;
+import com.example.app.security.UserPrincipal;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -24,8 +28,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
+@RequiredArgsConstructor
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private final AuditService auditService;
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Object>> handleNotFound(ResourceNotFoundException ex) {
@@ -43,12 +50,14 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(UnauthorizedException.class)
-    public ResponseEntity<ApiResponse<Object>> handleUnauthorized(UnauthorizedException ex) {
+    public ResponseEntity<ApiResponse<Object>> handleUnauthorized(UnauthorizedException ex, HttpServletRequest request) {
+        recordAccessAttempt("UNAUTHORIZED_ACCESS_ATTEMPT", ex.getMessage(), request);
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage());
     }
 
     @ExceptionHandler(ForbiddenException.class)
-    public ResponseEntity<ApiResponse<Object>> handleForbidden(ForbiddenException ex) {
+    public ResponseEntity<ApiResponse<Object>> handleForbidden(ForbiddenException ex, HttpServletRequest request) {
+        recordAccessAttempt("FORBIDDEN_ACCESS_ATTEMPT", ex.getMessage(), request);
         return build(HttpStatus.FORBIDDEN, ex.getMessage());
     }
 
@@ -58,12 +67,14 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(InvalidTokenException.class)
-    public ResponseEntity<ApiResponse<Object>> handleInvalidToken(InvalidTokenException ex) {
+    public ResponseEntity<ApiResponse<Object>> handleInvalidToken(InvalidTokenException ex, HttpServletRequest request) {
+        recordAccessAttempt("UNAUTHORIZED_ACCESS_ATTEMPT", ex.getMessage(), request);
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage());
     }
 
     @ExceptionHandler(ExpiredTokenException.class)
-    public ResponseEntity<ApiResponse<Object>> handleExpiredToken(ExpiredTokenException ex) {
+    public ResponseEntity<ApiResponse<Object>> handleExpiredToken(ExpiredTokenException ex, HttpServletRequest request) {
+        recordAccessAttempt("UNAUTHORIZED_ACCESS_ATTEMPT", ex.getMessage(), request);
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage());
     }
 
@@ -74,12 +85,14 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(AuthenticationException.class)
-    public ResponseEntity<ApiResponse<Object>> handleAuthentication(AuthenticationException ex) {
-        return build(HttpStatus.UNAUTHORIZED, "Authentication failed: " + ex.getMessage());
+    public ResponseEntity<ApiResponse<Object>> handleAuthentication(AuthenticationException ex, HttpServletRequest request) {
+        String message = "Authentication failed: " + ex.getMessage();
+        recordAccessAttempt("UNAUTHORIZED_ACCESS_ATTEMPT", message, request);
+        return build(HttpStatus.UNAUTHORIZED, message);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ApiResponse<Object>> handleAccessDenied(AccessDeniedException ex) {
+    public ResponseEntity<ApiResponse<Object>> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
         // @PreAuthorize failures surface as AccessDeniedException for BOTH
         // "not logged in at all" and "logged in but wrong role". Only the
         // latter is actually a 403 - if there is no real (non-anonymous)
@@ -91,9 +104,14 @@ public class GlobalExceptionHandler {
                 && !(authentication instanceof AnonymousAuthenticationToken);
 
         if (!isAuthenticated) {
-            return build(HttpStatus.UNAUTHORIZED, "Authentication required - please log in");
+            String message = "Authentication required - please log in";
+            recordAccessAttempt("UNAUTHORIZED_ACCESS_ATTEMPT", message, request);
+            return build(HttpStatus.UNAUTHORIZED, message);
         }
-        return build(HttpStatus.FORBIDDEN, "Access denied - you do not have permission to perform this action");
+
+        String message = "Access denied - you do not have permission to perform this action";
+        recordAccessAttempt("FORBIDDEN_ACCESS_ATTEMPT", message, request);
+        return build(HttpStatus.FORBIDDEN, message);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -138,6 +156,31 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Object>> handleGeneric(Exception ex) {
         log.error("Unexpected error occurred", ex);
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
+    }
+
+    private void recordAccessAttempt(String action, String message, HttpServletRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Long userId = authentication != null && authentication.getPrincipal() instanceof UserPrincipal principal
+                ? principal.getId()
+                : null;
+        String endpoint = request.getMethod() + " " + request.getRequestURI();
+        String description = endpoint + " - " + message;
+
+        auditService.record(
+                userId,
+                action,
+                "API_ENDPOINT",
+                truncate(endpoint, 50),
+                truncate(description, 500),
+                truncate(request.getRemoteAddr(), 64)
+        );
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength);
     }
 
     private ResponseEntity<ApiResponse<Object>> build(HttpStatus status, String message) {
